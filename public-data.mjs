@@ -1,0 +1,2 @@
+import {getData,json,corsHeaders} from './_shared.mjs';
+export default async (event)=>{const headers=corsHeaders(event);if(event.httpMethod==='OPTIONS')return new Response('',{status:204,headers});if(event.httpMethod!=='GET')return json({error:'Method not allowed'},405,headers);try{const data=await getData();const publicData={...data,drivers:data.drivers.filter(d=>d.published!==false),applications:undefined,payments:undefined};return json({data:publicData},200,headers)}catch(e){return json({error:'Unable to load public records'},500,headers)}};

@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const read = p => readFile(new URL('../'+p, import.meta.url), 'utf8');
+const data = JSON.parse(await read('netlify/functions/seed.json'));
+test('1: static entry points exist', async()=>{for(const p of ['public/index.html','public/app.js','public/styles.css','public/seed-data.js','netlify.toml']) assert.ok((await read(p)).length>0)});
+test('2: roster contains exactly 100 unique names',()=>{assert.equal(data.drivers.length,100);assert.equal(new Set(data.drivers.map(x=>x.name)).size,100)});
+test('3: Rachit Joshi keeps the known driver ID and location',()=>{const d=data.drivers.find(x=>x.name==='Rachit Joshi');assert.equal(d.id,'ISRO-UGT-2026-017');assert.equal(d.location,'Pithoragarh, Uttarakhand, India')});
+test('4: four requested featured drivers are Star Drivers',()=>{for(const n of ['Rachit Joshi','Elena Castillo','Priya Nair','Gargi Sharma']) assert.ok(data.drivers.find(x=>x.name===n)?.starDriver)});
+test('5: all points are within 200–300 and star drivers lead roster',()=>{assert.ok(data.drivers.every(d=>d.points>=200&&d.points<=300));assert.ok(data.drivers.find(x=>x.name==='Rachit Joshi').points>=Math.max(...data.drivers.filter(x=>x.starDriver).map(x=>x.points)))});
+test('6: every driver has a state and state-rank field',()=>{assert.ok(data.drivers.every(d=>d.state&&d.city&&Number.isInteger(d.stateRank)&&d.stateRank>=1))});
+test('7: Rachit is provisionally ranked first in Uttarakhand',()=>{const d=data.drivers.find(x=>x.name==='Rachit Joshi');assert.equal(d.stateRank,1);assert.match(d.stateRankLabel,/Top in Uttarakhand/)});
+test('8: no driver has fabricated medical clearance or results',()=>{assert.ok(data.drivers.every(d=>d.medicalClearance==='Pending'&&Array.isArray(d.results)&&d.results.length===0))});
+test('9: payment policy explicitly requires in-person Pune payment and no online fees',()=>{assert.match(data.settings.paymentPolicy,/in person/i);assert.match(data.settings.paymentPolicy,/Pune/i);assert.match(data.settings.paymentPolicy,/No fees are collected online/i)});
+test('10: Netlify publish and functions directories match project',async()=>{const t=await read('netlify.toml');assert.match(t,/publish\s*=\s*"public"/);assert.match(t,/functions\s*=\s*"netlify\/functions"/);assert.ok((await read('public/index.html')).includes('/seed-data.js'))});

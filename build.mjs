@@ -1,0 +1,10 @@
+import { access, readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+const files=['public/index.html','public/app.js','public/styles.css','public/seed-data.js','netlify.toml','netlify/functions/admin-login.mjs','netlify/functions/admin-data.mjs','netlify/functions/public-data.mjs','netlify/functions/_shared.mjs','netlify/functions/seed.json'];
+for(const f of files) await access(f);
+const seed=JSON.parse(await readFile('netlify/functions/seed.json','utf8'));
+if(!Array.isArray(seed.drivers)||seed.drivers.length!==100) throw new Error('Expected exactly 100 driver records.');
+const ids=seed.drivers.map(d=>d.id); if(new Set(ids).size!==ids.length) throw new Error('Duplicate driver IDs found.');
+const html=await readFile('public/index.html','utf8');
+for(const asset of ['/styles.css','/seed-data.js','/app.js']) if(!html.includes(asset)) throw new Error(`Missing asset reference: ${asset}`);
+console.log(`Build check passed: ${files.length} required files, ${seed.drivers.length} drivers, unique IDs, and static asset references verified.`);
